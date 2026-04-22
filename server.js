@@ -26,8 +26,8 @@ app.post('/precio', async (req, res) => {
 
     const url = `https://jp.mercari.com/search?keyword=${encodeURIComponent(keyword)}&status=on_sale&item_condition_id=1&shipping_payer_id=1&sort=price&order=asc`;
     
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(5000);
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForTimeout(8000);
 
     // Guardar HTML para debug
     const html = await page.content();
@@ -37,23 +37,28 @@ app.post('/precio', async (req, res) => {
     const precios = await page.evaluate(() => {
       // Intentar varios selectores
       const selectores = [
-        '[data-testid="price"]',
-        '.merPrice',
-        'span[class*="price"]',
-        'div[class*="price"]'
-      ];
-      
-      for (const selector of selectores) {
-        const elementos = document.querySelectorAll(selector);
-        if (elementos.length > 0) {
-          console.log('Selector encontrado:', selector, 'elementos:', elementos.length);
-          return Array.from(elementos).map(el => {
-            const texto = el.textContent.replace(/[^0-9]/g, '');
-            return parseInt(texto);
-          }).filter(p => !isNaN(p) && p >= 500 && p <= 200000);
-        }
+  '[data-testid="item-cell"]',
+  'li[data-testid="item-cell"]',
+  'div[class*="merItemThumbnail"]',
+  'div[class*="item-cell"]'
+];
+
+for (const selector of selectores) {
+  const elementos = document.querySelectorAll(selector);
+  if (elementos.length > 0) {
+    console.log('Selector encontrado:', selector, 'elementos:', elementos.length);
+    const precios = [];
+    elementos.forEach(el => {
+      const texto = el.textContent.replace(/[^0-9]/g, '');
+      const precio = parseInt(texto);
+      if (!isNaN(precio) && precio >= 500 && precio <= 200000) {
+        precios.push(precio);
       }
-      return [];
+    });
+    return precios;
+  }
+}
+return [];
     });
 
     await browser.close();
